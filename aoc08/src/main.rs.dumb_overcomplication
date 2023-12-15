@@ -1,0 +1,136 @@
+use std::fs;
+use std::collections::HashMap;
+
+fn main() {
+	let file = fs::read_to_string("input.txt")
+		.expect("Failed to read input");
+	let input: Vec<&str> = file
+		.lines()
+		.collect();
+	let _input_test1 = [
+		"LLR",
+		"",
+		"AAA = (BBB, BBB)",
+		"BBB = (AAA, ZZZ)",
+		"ZZZ = (ZZZ, ZZZ)"];
+	let _input_test2 = [
+		"LR",
+		"",
+		"11A = (11B, XXX)",
+		"11B = (XXX, 11Z)",
+		"11Z = (11B, XXX)",
+		"22A = (22B, XXX)",
+		"22B = (22C, 22C)",
+		"22C = (22Z, 22Z)",
+		"22Z = (22B, 22B)",
+		"XXX = (XXX, XXX)"];
+	
+	type NodeMap<'a> = HashMap<&'a str, (&'a str, &'a str)>;
+	fn built_map<'a>(lines: &'a [&str]) -> NodeMap<'a> {
+		let mut map: HashMap<&str, (&str, &str)> = HashMap::new();
+		for line in lines {
+			if !line.contains(" = ") {
+				continue;
+			}
+			let (node, unparsed_children) = line.split_once(" = ").unwrap();
+			let children = unparsed_children
+				.trim_matches(|c: char| c == '(' || c == ')')
+				.split_once(", ")
+				.unwrap();
+			map.insert(node, children);
+		}
+		return map;
+	}
+
+	let input1 = &input;
+	let map1 = built_map(input1);
+	let directions1: Vec<_> = input1.first().unwrap().chars().collect();
+	let mut steps1 = 0_usize;
+	let mut node = "AAA";
+	while node != "ZZZ" {
+		node = match directions1[steps1 % directions1.len()] {
+			'L' => map1[node].0,
+			'R' => map1[node].1,
+			_ => unreachable!("no bueno"),
+		};
+		steps1 += 1;
+	}
+	
+
+	println!("Part 1: {}", steps1);
+	assert_eq!(steps1, 19783);
+
+	// Part 2 is a redo of the 2020 problem "offset lowest common denominator" problem. Thanks, I hate it.
+	// This fn and following taken from https://math.stackexchange.com/questions/2218763/how-to-find-lcm-of-two-numbers-when-one-starts-with-an-offset
+	fn combine_phased_rotation(a_period: isize, a_phase: isize, b_period: isize, b_phase: isize) -> (isize, isize) {
+		let (gcd, s) = extended_gcd(a_period, b_period);
+		let phase_diff = a_phase - b_phase;
+		let pd_mult = phase_diff / gcd;
+		let pd_rem = phase_diff % gcd;
+		assert!(pd_rem == 0, "Rotation reference points never synchronize.");
+
+		let combined_period = a_period / gcd * b_period;
+		let combined_phase = (a_phase - s * pd_mult * a_period) % combined_period;
+		return (combined_period, combined_phase)
+	}
+
+	// Turns out I could have used num_integer::extended_gcd for this, but here it is...
+	fn extended_gcd(a: isize, b: isize) -> (isize, isize) {
+		let mut old_r = a;
+		let mut r = b;
+		let mut old_s = 1;
+		let mut s = 0;
+		while r > 0 {
+			let quotient = old_r / r;
+			let remainder = old_r % r;
+			old_r = r;
+			r = remainder;
+			let temp_s = old_s - quotient * s;
+			old_s = s;
+			s = temp_s;
+		}
+		return (old_r, old_s);
+	}
+
+	fn p2_count_steps<'a>(map: &NodeMap<'a>, directions: &[char], start_node: &'a str) -> (usize, &'a str) {
+		let mut steps = 0_usize;
+		let mut node = start_node;
+		loop {
+			node = match directions[steps % directions.len()] {
+				'L' => map[node].0 ,
+				'R' => map[node].1 ,
+				_ => unreachable!("you fool"),
+			};
+			steps += 1;
+			if node.ends_with('Z') {
+				break;
+			}
+		}
+		return (steps, node);
+	}
+
+	let input2 = &input;
+	let map2 = built_map(input2);
+	let directions2: Vec<_> = input2.first().unwrap().chars().collect();
+	let start_nodes: Vec<_> = map2
+		.keys()
+		.filter(|k| k.ends_with('A'))
+		.map(|k| *k)
+		.collect();
+	let combined = start_nodes
+		.iter()
+		.map(|n| -> (_, _) {
+			let (phase_steps, last_node) = p2_count_steps(&map2, &directions2, n);
+			let (period_steps, last_step2) = p2_count_steps(&map2, &directions2, last_node);
+			assert_eq!(phase_steps, period_steps);
+			assert_eq!(last_node, last_step2); // That's the trick, input could have not been directly cyclical, but it is
+			return (period_steps as isize, phase_steps as isize);
+		})
+		.fold(None, |acc: Option<(_,_)>, t| if let Some(a) = acc { Some(combine_phased_rotation(a.0, a.1, t.0, t.1)) } else { Some(t) })
+		.unwrap();
+
+	let steps2 = combined.0 + combined.1;
+	println!("Part 2: {}", steps2);
+	assert_eq!(steps2, 9177460370549);
+	
+}
