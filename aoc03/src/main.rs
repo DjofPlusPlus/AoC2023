@@ -11,16 +11,16 @@ fn main() {
 		.try_into()
 		.unwrap();
 	let _input_test: [[u8; 10]; 10] = [
-		"467..114..".as_bytes().try_into().unwrap(),
-		"...*......".as_bytes().try_into().unwrap(),
-		"..35..633.".as_bytes().try_into().unwrap(),
-		"......#...".as_bytes().try_into().unwrap(),
-		"617*......".as_bytes().try_into().unwrap(),
-		".....+.58.".as_bytes().try_into().unwrap(),
-		"..592.....".as_bytes().try_into().unwrap(),
-		"......755.".as_bytes().try_into().unwrap(),
-		"...$.*....".as_bytes().try_into().unwrap(),
-		".664.598..".as_bytes().try_into().unwrap(),
+		*b"467..114..",
+		*b"...*......",
+		*b"..35..633.",
+		*b"......#...",
+		*b"617*......",
+		*b".....+.58.",
+		*b"..592.....",
+		*b"......755.",
+		*b"...$.*....",
+		*b".664.598..",
 	];
 
 	let mut p1_values: Vec<u32> = Vec::new();
